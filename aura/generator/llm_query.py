@@ -8,11 +8,29 @@ import os
 
 class LLMQuery:
     def __init__(self, openai_api_key, together_ai_api_key, anthropic_api_key):
+        """
+        Initialize the LLMQuery class with API keys for OpenAI, Together AI, and Anthropic.
+
+        Args:
+            openai_api_key (str): API key for OpenAI.
+            together_ai_api_key (str): API key for Together AI.
+            anthropic_api_key (str): API key for Anthropic.
+        """
         self.openai_api_key = openai_api_key
         self.together_ai_api_key = together_ai_api_key
         self.anthropic_api_key = anthropic_api_key
 
     def query_gpt4(self, prompt, system_prompt):
+        """
+        Query the GPT-4 model using OpenAI's API.
+
+        Args:
+            prompt (str): The user prompt to send to the model.
+            system_prompt (str): The system prompt to set the context for the model.
+
+        Returns:
+            str: The response from the model, or None if an error occurs.
+        """
         client = OpenAI()
         
         for attempt in range(5): 
@@ -32,6 +50,16 @@ class LLMQuery:
         return None
 
     def query_llama(self, prompt, system_prompt):
+        """
+        Query the Llama model using Together AI's API.
+
+        Args:
+            prompt (str): The user prompt to send to the model.
+            system_prompt (str): The system prompt to set the context for the model.
+
+        Returns:
+            str: The response from the model, or None if an error occurs.
+        """
         TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
         client = Together(api_key=TOGETHER_API_KEY)
          
@@ -55,6 +83,16 @@ class LLMQuery:
         return None
 
     def query_claude_opus(self, prompt, system_prompt):        
+        """
+        Query the Claude Opus model using Anthropic's API.
+
+        Args:
+            prompt (str): The user prompt to send to the model.
+            system_prompt (str): The system prompt to set the context for the model.
+
+        Returns:
+            str: The response from the model, or a message indicating an error or content filtering.
+        """
         responses = []
         
         client = anthropic.Anthropic()

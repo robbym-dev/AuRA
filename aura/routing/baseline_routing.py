@@ -1,3 +1,5 @@
+# This implementation is hard coded for now and will later support dynamic baseline configuration.
+
 from aura.retriever.retriever import BM25, SentenceBERT_Retriever
 from aura.generator.llm_query import LLMQuery
 import os
@@ -6,6 +8,12 @@ from tqdm import tqdm
 
 class BaselineRouting:
     def __init__(self, aura_config):
+        """
+        Initializes the BaselineRouting class with the given configuration.
+
+        Args:
+            aura_config (dict): Configuration settings for the BaselineRouting.
+        """
         self.aura_config = aura_config
         self.retriever = BM25(aura_config)
         self.llm_query = LLMQuery(
@@ -15,6 +23,15 @@ class BaselineRouting:
         )
     
     def retrieve_documents(self, num_queries=None):
+        """
+        Retrieves documents based on the queries specified in the configuration.
+
+        Args:
+            num_queries (int, optional): Number of queries to process. If None, all queries are processed.
+
+        Returns:
+            tuple: A tuple containing the list of queries and the list of retrieved documents.
+        """
         print("Retrieving documents for Baseline Routing...")
         queries_df = pd.read_csv(self.aura_config["queries"], sep='\t')
         queries = queries_df['Query'].tolist()
@@ -26,6 +43,16 @@ class BaselineRouting:
         return queries, documents
 
     def generate_answers(self, queries, documents):
+        """
+        Generates answers for the given queries and documents using the LLM.
+
+        Args:
+            queries (list): List of query strings.
+            documents (list): List of lists containing retrieved documents for each query.
+
+        Returns:
+            list: A list of dictionaries containing the query, document, and generated answer.
+        """
         print("Generating answers for Baseline Routing...")
         results = []
         for query, doc_list in tqdm(zip(queries, documents), total=len(queries), desc="Baseline Routing"):
@@ -37,6 +64,15 @@ class BaselineRouting:
         return results
 
     def run(self, num_queries=None):
+        """
+        Executes the baseline routing process: retrieves documents, generates answers, and saves the results.
+
+        Args:
+            num_queries (int, optional): Number of queries to process. If None, all queries are processed.
+
+        Returns:
+            str: The file path where the results are saved.
+        """
         queries, documents = self.retrieve_documents(num_queries)
         answers = self.generate_answers(queries, documents)
         results_df = pd.DataFrame(answers)

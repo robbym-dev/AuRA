@@ -6,13 +6,21 @@ from torch.utils.data import DataLoader
 import torch
 from aura.retriever.retriever import BM25, SentenceBERT_Retriever, MiniLM_Retriever
 from aura.generator.llm_query import LLMQuery
-from aura.generator.generator import Generator
 from aura.classifier.llm_classifier import CustomBERTModel, prepare_data_for_training, train_model, prepare_classifier_data_from_files
 from aura.routing.baseline_routing import BaselineRouting
 from aura.routing.dynamic_routing import DynamicRouting
 from ares import ARES
 
 def find_best_retriever(aura_config):
+    """
+    Finds the best retriever based on the given configuration.
+
+    Args:
+        aura_config (dict): Configuration dictionary containing necessary parameters.
+
+    Returns:
+        tuple: Best retriever name and the file path of the best retriever documents.
+    """
     queries_df = pd.read_csv(aura_config["queries"], sep='\t')
     queries = queries_df['Query'].tolist()
     
@@ -84,6 +92,16 @@ def find_best_retriever(aura_config):
     return best_retriever_name, best_retriever_docs_file
 
 def evaluate_llms(aura_config, best_retriever_docs_file):
+    """
+    Evaluates different LLMs based on the best retriever documents.
+
+    Args:
+        aura_config (dict): Configuration dictionary containing necessary parameters.
+        best_retriever_docs_file (str): File path of the best retriever documents.
+
+    Returns:
+        str: Name of the best LLM.
+    """
     SYSTEM_PROMPT = "You are an expert assistant specialized in answering questions based on provided documents. Given a query and a set of documents, provide the most relevant and concise answer based on the content of the documents."
 
     docs_df = pd.read_csv(best_retriever_docs_file, sep='\t')
@@ -183,6 +201,16 @@ def evaluate_llms(aura_config, best_retriever_docs_file):
     return best_llm_name
 
 def load_ares_predictions(aura_config, llm_names):
+    """
+    Loads ARES predictions for the given LLM names.
+
+    Args:
+        aura_config (dict): Configuration dictionary containing necessary parameters.
+        llm_names (list): List of LLM names.
+
+    Returns:
+        dict: A dictionary with LLM names as keys and their ARES predictions as values.
+    """
     ares_results = {}
     for llm_name in llm_names:
         prediction_file_path = os.path.join(aura_config["LLM_prediction_folder_directory"], f"{llm_name}_ares_predictions.tsv")
@@ -192,6 +220,16 @@ def load_ares_predictions(aura_config, llm_names):
     return ares_results
 
 def prepare_classifier_data_from_files(aura_config, llm_names):
+    """
+    Prepares classifier data from files.
+
+    Args:
+        aura_config (dict): Configuration dictionary containing necessary parameters.
+        llm_names (list): List of LLM names.
+
+    Returns:
+        dict: A dictionary containing documents, queries, answers, and ARES results.
+    """
     documents = []
     queries = []
     answers = {llm_name: [] for llm_name in llm_names}
@@ -217,12 +255,23 @@ def prepare_classifier_data_from_files(aura_config, llm_names):
     return classifier_data
 
 def print_final_parameters(params):
+    """
+    Prints the final parameters used for training the classifier.
+
+    Args:
+        params (dict): Dictionary of parameters.
+    """
     print("Final parameters used for training the classifier:")
     for key, value in params.items():
         print(f"{key}: {value}")
 
-# Function to train the classifier
 def train_llm_classifier(aura_config):
+    """
+    Trains the LLM classifier based on the given configuration.
+
+    Args:
+        aura_config (dict): Configuration dictionary containing necessary parameters.
+    """
     llm_names = ["GPT-4", "Llama", "Claude Opus"]
 
     classifier_data = prepare_classifier_data_from_files(aura_config, llm_names)
@@ -240,7 +289,6 @@ def train_llm_classifier(aura_config):
     df = pd.DataFrame(rows)
     df.to_csv(aura_config["classifier_training_data"], index=False, sep='\t')
 
-    # Extract parameters from aura_config, with defaults
     model_name = aura_config.get("model_choice", "bert-base-uncased")
     num_labels = len(answers.keys())
     learning_rate = aura_config.get("learning_rate", 2e-5)
@@ -250,7 +298,6 @@ def train_llm_classifier(aura_config):
     max_length = 512
     device = aura_config.get("device", torch.device("cuda" if torch.cuda.is_available() else "cpu"))
 
-    # Print final parameters
     final_params = {
         "model_name": model_name,
         "num_labels": num_labels,
@@ -272,16 +319,34 @@ def train_llm_classifier(aura_config):
     model = CustomBERTModel(num_labels, model_name)
     trained_model = train_model(model, train_dataloader, val_dataloader, num_epochs, learning_rate, device)
 
-    # Save the model as a checkpoint
     checkpoint_path = os.path.join(aura_config["model_dir"], "model_checkpoint.pt")
     torch.save(trained_model.state_dict(), checkpoint_path)
     print(f"Model saved to {checkpoint_path}")
-    
 
 def construct_results_filename(base_name, num_queries):
+    """
+    Constructs a results filename based on the base name and number of queries.
+
+    Args:
+        base_name (str): Base name for the file.
+        num_queries (int): Number of queries.
+
+    Returns:
+        str: Constructed filename.
+    """
     return f"{base_name}_{num_queries}.tsv"
 
 def run_baseline_routing(aura_config, num_queries=None):
+    """
+    Runs baseline routing and saves the results.
+
+    Args:
+        aura_config (dict): Configuration dictionary containing necessary parameters.
+        num_queries (int, optional): Number of queries. Defaults to None.
+
+    Returns:
+        str: File path of the baseline routing results.
+    """
     results_filename = construct_results_filename("baseline_routing_results", num_queries)
     results_filepath = os.path.join(aura_config["LLM_prediction_folder_directory"], results_filename)
     
@@ -296,6 +361,16 @@ def run_baseline_routing(aura_config, num_queries=None):
     return results_filepath
 
 def run_dynamic_routing(aura_config, num_queries=None):
+    """
+    Runs dynamic routing and saves the results.
+
+    Args:
+        aura_config (dict): Configuration dictionary containing necessary parameters.
+        num_queries (int, optional): Number of queries. Defaults to None.
+
+    Returns:
+        str: File path of the dynamic routing results.
+    """
     results_filename = construct_results_filename("dynamic_routing_results", num_queries)
     results_filepath = os.path.join(aura_config["LLM_prediction_folder_directory"], results_filename)
     
@@ -310,6 +385,17 @@ def run_dynamic_routing(aura_config, num_queries=None):
     return results_filepath
 
 def evaluate_routing_results(aura_config, results_file, evaluation_label):
+    """
+    Evaluates routing results using ARES.
+
+    Args:
+        aura_config (dict): Configuration dictionary containing necessary parameters.
+        results_file (str): File path of the routing results.
+        evaluation_label (str): Label for evaluation.
+
+    Returns:
+        dict: Evaluation results.
+    """
     ppi_config = {
         "evaluation_datasets": [results_file],
         "few_shot_examples_filepath": aura_config["few_shot_examples_file_path"],
@@ -324,8 +410,14 @@ def evaluate_routing_results(aura_config, results_file, evaluation_label):
     print(f"{evaluation_label} evaluation results: {routing_evaluation_results}")
     return routing_evaluation_results
 
-# Function to run the entire pipeline
 def run_aura_pipeline(aura_config, num_queries=None):
+    """
+    Runs the entire AuRA pipeline.
+
+    Args:
+        aura_config (dict): Configuration dictionary containing necessary parameters.
+        num_queries (int, optional): Number of queries. Defaults to None.
+    """
     print("Starting the AuRA pipeline...")
     best_retriever_name, best_retriever_docs_file = find_best_retriever(aura_config)
     print(f"Best retriever: {best_retriever_name}, documents saved to: {best_retriever_docs_file}")

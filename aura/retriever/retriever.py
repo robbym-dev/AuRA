@@ -8,23 +8,56 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 
 class Retriever:
+    """
+    Base class for document retrievers.
+    """
     def __init__(self, config):
+        """
+        Initializes the Retriever with the given configuration.
+
+        Args:
+            config (dict): Configuration settings for the retriever.
+        """
         self.retrieval_model = config.get("retrieval_model")
         self.documents = config.get("documents")
         self.top_k = config.get("top_k", 5)
         self.document_index = None
 
     def initialize_retriever(self):
+        """
+        Initializes the retriever. Must be implemented in subclasses.
+        """
         raise NotImplementedError("initialize_retriever method must be implemented in subclasses")
 
     def search(self, queries):
+        """
+        Searches for the given queries. Must be implemented in subclasses.
+
+        Args:
+            queries (list): List of query strings.
+
+        Returns:
+            list: List of retrieved documents for each query.
+        """
         raise NotImplementedError("search method must be implemented in subclasses")
 
 class BM25(Retriever):
+    """
+    BM25-based document retriever.
+    """
     def __init__(self, config):
+        """
+        Initializes the BM25 retriever with the given configuration.
+
+        Args:
+            config (dict): Configuration settings for the retriever.
+        """
         super().__init__(config)
 
     def initialize_retriever(self):
+        """
+        Initializes the BM25 retriever by loading and indexing documents.
+        """
         print("Initializing BM25 retriever...")
         self.documents = pd.read_csv(self.documents, sep='\t')
         self.documents = self.documents.drop_duplicates(subset="Document")
@@ -33,11 +66,23 @@ class BM25(Retriever):
         print("BM25 index created.")
 
     def create_index(self):
+        """
+        Creates the BM25 index from the loaded documents.
+        """
         self.documents = self.documents['Document'].tolist()
         tokenized_documents = [doc.split() for doc in self.documents]
         self.document_index = BM25Okapi(tokenized_documents)
 
     def search(self, queries):
+        """
+        Searches for the given queries using the BM25 index.
+
+        Args:
+            queries (list): List of query strings.
+
+        Returns:
+            list: List of top-k retrieved documents for each query.
+        """
         total_retrieved_docs = []
         for query in tqdm(queries, desc="BM25 retrieval"):
             tokenized_query = query.split()
@@ -48,10 +93,22 @@ class BM25(Retriever):
         return total_retrieved_docs
 
 class SentenceBERT_Retriever(Retriever):
+    """
+    Sentence-BERT-based document retriever.
+    """
     def __init__(self, config):
+        """
+        Initializes the SentenceBERT retriever with the given configuration.
+
+        Args:
+            config (dict): Configuration settings for the retriever.
+        """
         super().__init__(config)
 
     def initialize_retriever(self):
+        """
+        Initializes the SentenceBERT retriever by loading and indexing documents.
+        """
         print("Initializing SentenceBERT retriever...")
         self.documents = pd.read_csv(self.documents, sep='\t')
         self.documents = self.documents.drop_duplicates(subset="Document")
@@ -61,6 +118,9 @@ class SentenceBERT_Retriever(Retriever):
         print("SentenceBERT index created.")
 
     def create_index(self):
+        """
+        Creates the SentenceBERT index from the loaded documents.
+        """
         self.document_index = self.documents.drop_duplicates(subset="Document")
         tqdm.pandas(desc="Generating SentenceBERT embeddings")
         self.document_index['embeddings'] = self.document_index["Document"].progress_apply(lambda x: self.retrieval_model.encode(x, convert_to_tensor=True).tolist())
@@ -68,6 +128,15 @@ class SentenceBERT_Retriever(Retriever):
         self.document_index.add_faiss_index(column="embeddings")
 
     def search(self, queries):
+        """
+        Searches for the given queries using the SentenceBERT index.
+
+        Args:
+            queries (list): List of query strings.
+
+        Returns:
+            list: List of top-k retrieved documents for each query.
+        """
         total_retrieved_docs = []
         for query in tqdm(queries, desc="SentenceBERT retrieval"):
             query_embedding = self.retrieval_model.encode(query, convert_to_tensor=True).tolist()
@@ -78,10 +147,22 @@ class SentenceBERT_Retriever(Retriever):
         return total_retrieved_docs
 
 class MiniLM_Retriever(Retriever):
+    """
+    MiniLM-based document retriever.
+    """
     def __init__(self, config):
+        """
+        Initializes the MiniLM retriever with the given configuration.
+
+        Args:
+            config (dict): Configuration settings for the retriever.
+        """
         super().__init__(config)
 
     def initialize_retriever(self):
+        """
+        Initializes the MiniLM retriever by loading and indexing documents.
+        """
         print("Initializing MiniLM retriever...")
         self.documents = pd.read_csv(self.documents, sep='\t')
         self.documents = self.documents.drop_duplicates(subset="Document")
@@ -91,6 +172,9 @@ class MiniLM_Retriever(Retriever):
         print("MiniLM index created.")
 
     def create_index(self):
+        """
+        Creates the MiniLM index from the loaded documents.
+        """
         self.document_index = self.documents.drop_duplicates(subset="Document")
         tqdm.pandas(desc="Generating MiniLM embeddings")
         self.document_index['embeddings'] = self.document_index["Document"].progress_apply(lambda x: self.retrieval_model.encode(x, convert_to_tensor=True).tolist())
@@ -98,6 +182,15 @@ class MiniLM_Retriever(Retriever):
         self.document_index.add_faiss_index(column="embeddings")
 
     def search(self, queries):
+        """
+        Searches for the given queries using the MiniLM index.
+
+        Args:
+            queries (list): List of query strings.
+
+        Returns:
+            list: List of top-k retrieved documents for each query.
+        """
         total_retrieved_docs = []
         for query in tqdm(queries, desc="MiniLM retrieval"):
             query_embedding = self.retrieval_model.encode(query, convert_to_tensor=True).tolist()
