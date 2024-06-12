@@ -16,14 +16,13 @@ aura_config = {
     "model_dir": "<file path to save model checkpoint>",
     "model_choice": "microsoft/deberta-v3-large",
     "classifier_validation_data": "<file path to classifier validation data>",
-    "max_queries": "<max number of queries>",
-    "debug_mode": True,
-    "num_epochs": 10, 
-    "patience_value": 3, 
-    "learning_rate": 5e-6,
-    "assigned_batch_size": 1,  
-    "gradient_accumulation_multiplier": 32, 
-    "top_k": 1 
+    "top_k": 1, 
+    "max_queries": "<max number of queries>", # OPTIONAL
+    "num_epochs": 10, # OPTIONAL
+    "patience_value": 3, # OPTIONAL
+    "learning_rate": 5e-6, # OPTIONAL
+    "assigned_batch_size": 1, # OPTIONAL
+    "gradient_accumulation_multiplier": 32, # OPTIONAL
 }
 
 run_aura_pipeline(aura_config)

@@ -78,14 +78,13 @@ aura_config = {
     "model_dir": "/future/u/manihani/AuRA-Folder/AuRA/nq_classifier_training",
     "model_choice": "microsoft/deberta-v3-large",
     "classifier_validation_data": "/future/u/manihani/ARES/datasets/eval_datasets/nq/nq_ratio_0.6.tsv",
-    "max_queries": 500,
-    "debug_mode": True,
-    "num_epochs": 10, 
-    "patience_value": 3, 
-    "learning_rate": 5e-6,
-    "assigned_batch_size": 1,  
-    "gradient_accumulation_multiplier": 32, 
-    "top_k": 1 
+    "top_k": 1,
+    "max_queries": 500, # OPTIONAL
+    "num_epochs": 10, # OPTIONAL
+    "patience_value": 3, # OPTIONAL
+    "learning_rate": 5e-6, # OPTIONAL
+    "assigned_batch_size": 1, # OPTIONAL
+    "gradient_accumulation_multiplier": 32, # OPTIONAL
 }
 
 num_queries = 200

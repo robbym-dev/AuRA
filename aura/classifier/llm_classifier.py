@@ -272,7 +272,7 @@ class EarlyStopping:
             print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         self.val_loss_min = val_loss
 
-def train_model(model, train_dataloader, val_dataloader, num_epochs, learning_rate, device, patience=3):
+def train_model(model, train_dataloader, val_dataloader, num_epochs, learning_rate, device, gradient_accumulation_multiplier, patience=3):
     """
     Trains the model using the provided data loaders and training parameters.
     
@@ -307,9 +307,11 @@ def train_model(model, train_dataloader, val_dataloader, num_epochs, learning_ra
             loss = loss_fn(outputs, batch['labels'])
             loss.backward()
 
-            optimizer.step
-            lr_scheduler.step()
-            optimizer.zero_grad()
+            gradient_accumulation_count += 1
+            if gradient_accumulation_count % gradient_accumulation_multiplier == 0:
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad()
 
             total_loss += loss.item()
 

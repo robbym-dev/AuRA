@@ -291,9 +291,10 @@ def train_llm_classifier(aura_config):
 
     model_name = aura_config.get("model_choice", "bert-base-uncased")
     num_labels = len(answers.keys())
-    learning_rate = aura_config.get("learning_rate", 2e-5)
-    num_epochs = aura_config.get("num_epochs", 3)
-    batch_size = aura_config.get("assigned_batch_size", 16)
+    learning_rate = aura_config.get("learning_rate",  5e-6)
+    num_epochs = aura_config.get("num_epochs", 10)
+    batch_size = aura_config.get("assigned_batch_size", 1)
+    gradient_accumulation_multiplier = aura_config.get("gradient_accumulation_multiplier", 32)
     validation_path = aura_config.get("classifier_validation_data", "")
     max_length = 512
     device = aura_config.get("device", torch.device("cuda" if torch.cuda.is_available() else "cpu"))
@@ -317,7 +318,7 @@ def train_llm_classifier(aura_config):
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
     model = CustomBERTModel(num_labels, model_name)
-    trained_model = train_model(model, train_dataloader, val_dataloader, num_epochs, learning_rate, device)
+    trained_model = train_model(model, train_dataloader, val_dataloader, num_epochs, learning_rate, device, gradient_accumulation_multiplier, patience=3)
 
     checkpoint_path = os.path.join(aura_config["model_dir"], "model_checkpoint.pt")
     torch.save(trained_model.state_dict(), checkpoint_path)
