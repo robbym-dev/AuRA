@@ -1,3 +1,5 @@
+# llm_classifier.py
+
 import torch
 import torch.nn as nn
 from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, AdamW, get_scheduler
@@ -355,57 +357,3 @@ def save_model(model, tokenizer, model_dir):
     os.makedirs(model_dir, exist_ok=True)
     model.save_pretrained(model_dir)
     tokenizer.save_pretrained(model_dir)
-    
-def prepare_classifier_data_from_files(aura_config, llm_names):
-    """
-    Prepares classifier data from files specified in the aura_config for the given llm_names.
-    
-    Args:
-        aura_config (dict): Configuration containing paths and other settings.
-        llm_names (list): List of names of language models.
-    
-    Returns:
-        dict: A dictionary containing documents, queries, answers, and ARES results.
-    """
-    documents = []
-    queries = []
-    answers = {llm_name: [] for llm_name in llm_names}
-
-    docs_df = pd.read_csv(os.path.join(aura_config["LLM_prediction_folder_directory"], "best_retriever_docs.tsv"), sep='\t')
-    queries = docs_df['Query'].tolist()
-    documents = docs_df['Document'].tolist()
-
-    for llm_name in llm_names:
-        results_file = os.path.join(aura_config["LLM_prediction_folder_directory"], f"{llm_name}_results.tsv")
-        results_df = pd.read_csv(results_file, sep='\t')
-        answers[llm_name] = results_df['Answer'].tolist()
-
-    ares_results = load_ares_predictions(aura_config, llm_names)
-
-    classifier_data = {
-        "documents": documents,
-        "queries": queries,
-        "answers": answers,
-        "ares_results": ares_results
-    }
-
-    return classifier_data
-
-def load_ares_predictions(aura_config, llm_names):
-    """
-    Loads ARES predictions for the specified llm_names from the aura_config.
-    
-    Args:
-        aura_config (dict): Configuration containing paths and other settings.
-        llm_names (list): List of names of language models.
-    
-    Returns:
-        dict: A dictionary containing ARES predictions for each llm_name.
-    """
-    ares_results = {}
-    for llm_name in llm_names:
-        prediction_file_path = os.path.join(aura_config["LLM_prediction_folder_directory"], f"{llm_name}_ares_predictions.tsv")
-        if not os.path.exists(prediction_file_path):
-            raise FileNotFoundError(f"Prediction file for {llm_name} not found: {prediction_file_path}")
-        ares_results[llm_name] = pd.read_csv(prediction_file_path, sep='\t')["ARES_Answer_Relevance_Prediction"].tolist()
-    return ares_results

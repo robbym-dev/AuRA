@@ -22,12 +22,9 @@ class BaselineRouting:
             anthropic_api_key=os.getenv("ANTHROPIC_API_KEY")
         )
     
-    def retrieve_documents(self, num_queries=None):
+    def retrieve_documents(self):
         """
         Retrieves documents based on the queries specified in the configuration.
-
-        Args:
-            num_queries (int, optional): Number of queries to process. If None, all queries are processed.
 
         Returns:
             tuple: A tuple containing the list of queries and the list of retrieved documents.
@@ -35,8 +32,6 @@ class BaselineRouting:
         print("Retrieving documents for Baseline Routing...")
         queries_df = pd.read_csv(self.aura_config["queries"], sep='\t')
         queries = queries_df['Query'].tolist()
-        if num_queries:
-            queries = queries[:num_queries]
         self.retriever.initialize_retriever()
         documents = self.retriever.search(queries)
         print(f"Retrieved {len(documents)} documents for Baseline Routing.")
@@ -63,20 +58,17 @@ class BaselineRouting:
         print("Generated answers for Baseline Routing.")
         return results
 
-    def run(self, num_queries=None):
+    def run(self):
         """
         Executes the baseline routing process: retrieves documents, generates answers, and saves the results.
-
-        Args:
-            num_queries (int, optional): Number of queries to process. If None, all queries are processed.
 
         Returns:
             str: The file path where the results are saved.
         """
-        queries, documents = self.retrieve_documents(num_queries)
+        queries, documents = self.retrieve_documents()
         answers = self.generate_answers(queries, documents)
         results_df = pd.DataFrame(answers)
-        results_file = os.path.join(self.aura_config["LLM_prediction_folder_directory"], f"baseline_routing_results_{num_queries}.tsv")
+        results_file = os.path.join(self.aura_config["LLM_prediction_folder_directory"], "baseline_routing_results.tsv")
         results_df.to_csv(results_file, index=False, sep='\t')
         print(f"Baseline routing results saved to: {results_file}")
         return results_file

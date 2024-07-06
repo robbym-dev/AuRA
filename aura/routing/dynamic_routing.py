@@ -16,7 +16,7 @@ class DynamicRouting:
             aura_config (dict): Configuration settings for the DynamicRouting.
         """
         self.aura_config = aura_config
-        number_of_labels = len(["GPT-4", "Llama", "Claude Opus"])  # Define the number of labels for the classifier
+        number_of_labels = len(aura_config["llm_names"])  # Define the number of labels for the classifier
 
         # Load the pre-trained classifier model
         self.classifier_model = CustomBERTModel.from_pretrained(aura_config["model_dir"], aura_config["model_choice"], number_of_labels)
@@ -31,9 +31,6 @@ class DynamicRouting:
             together_ai_api_key=os.getenv("TOGETHER_AI_API_KEY"),
             anthropic_api_key=os.getenv("ANTHROPIC_API_KEY")
         )
-
-        # Configure logging
-        logging.basicConfig(filename='dynamic_routing.log', level=logging.INFO)
 
     def route_query(self, query, document):
         """
@@ -86,30 +83,19 @@ class DynamicRouting:
             return self.llm_query.query_claude_opus(prompt, "You are an expert assistant specialized in answering questions based on provided documents. Given a query and a set of documents, provide the most relevant and concise answer based on the content of the documents.")
         return None
 
-    def run(self, num_queries=None):
+    def run(self):
         """
         Executes the dynamic routing process: routes queries, generates answers, and saves the results.
-
-        Args:
-            num_queries (int, optional): Number of queries to process. If None, all queries are processed.
 
         Returns:
             str: The file path where the results are saved.
         """
         print("Running Dynamic Routing...")
-        logging.info("Starting Dynamic Routing...")
 
-        # Load queries from the specified file
-        queries_df = pd.read_csv(self.aura_config["queries"], sep='\t')
-        queries = queries_df['Query'].tolist()
-        if num_queries:
-            queries = queries[:num_queries]
-
-        # Load documents from the specified file
-        docs_df = pd.read_csv(os.path.join(self.aura_config["LLM_prediction_folder_directory"], "best_retriever_docs.tsv"), sep='\t')
-        documents = docs_df['Document'].tolist()
-        if num_queries:
-            documents = documents[:num_queries]
+        # Load documents and queries from the specified file
+        df = pd.read_csv(os.path.join(self.aura_config["LLM_prediction_folder_directory"], "best_retriever_docs.tsv"), sep='\t')
+        documents = df['Document'].tolist()
+        queries = df['Query'].tolist()
 
         results = []
         # Process each query-document pair
@@ -128,5 +114,4 @@ class DynamicRouting:
         results_file = os.path.join(self.aura_config["LLM_prediction_folder_directory"], "dynamic_routing_results.tsv")
         results_df.to_csv(results_file, index=False, sep='\t')
         print(f"Dynamic routing results saved to: {results_file}")
-        logging.info(f"Dynamic routing results saved to: {results_file}")
         return results_file
