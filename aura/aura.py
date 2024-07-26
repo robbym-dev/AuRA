@@ -1,15 +1,18 @@
 # aura.py
 
 from typing import List, Union, get_origin, get_args
-from aura.retriever.manager import find_best_retriever
+from aura.retriever.manager import find_best_documents, MultiRetrieverManager
 from aura.classifier.classifier_manager import train_llm_classifier
 from aura.routing.llm_routing_manager import query_and_evaluate_llms, run_llm_routing_pipeline
+from aura.retriever.retriever_evaluation import RetrieverEvaluator
+
 
 class AURA:
     REQUIRED_BUT_HAS_DEFAULT = object()
 
     config_spec = {
         "retriever": {
+            "nq_data_path": (str, None),
             "documents": (str, None),
             "queries": (str, None),
             "LLM_prediction_folder_directory": (str, None),
@@ -17,7 +20,9 @@ class AURA:
             "rag_type": (str, None),
             "checkpoint": (str, None),
             "gold_label_path": (str, None),
-            "top_k": (int, 1),
+            "top_k": (int, 3),
+            "rank_constant": (int, "None"),  # New RRF parameter
+            "window_size": (int, "None"),   # New RRF parameter
         },
         "llm_generation": { 
             "LLM_prediction_folder_directory": (str, None), 
@@ -90,9 +95,26 @@ class AURA:
     def run_aura_pipeline(self):
         print("Starting the AuRA pipeline...")
         
-        best_retriever_name, best_retriever_docs_file = find_best_retriever(self.retriever_config)
-        print(f"Best retriever: {best_retriever_name}, documents saved to: {best_retriever_docs_file}")
+        # Initialize MultiRetrieverManager
+        retriever_manager = MultiRetrieverManager(self.retriever_config)
+        retriever_manager.initialize_retrievers()
         
+        # Get queries
+        evaluator = RetrieverEvaluator(self.retriever_config['nq_data_path'], self.retriever_config)
+        queries = evaluator.get_queries()
+        
+        # Run all retrievers
+        retriever_results = retriever_manager.search(queries)
+        
+        # Evaluate each retriever
+        evaluation_results = evaluator.evaluate_retrievers(retriever_results)
+        evaluator.print_results(evaluation_results)
+        
+        # Find best documents (this will use RRF if configured)
+        best_retriever_docs_file = find_best_documents(self.retriever_config)
+        print(f"Best retrieved documents saved to: {best_retriever_docs_file}")
+        
+        # Continue with the rest of the pipeline
         best_llm_name = query_and_evaluate_llms(self.llm_generation_config, best_retriever_docs_file)
         print(f"Note - Best LLM: {best_llm_name}")
         
@@ -104,7 +126,8 @@ class AURA:
         routing_results = run_llm_routing_pipeline(self.llm_routing_config)
         
         return {
-            "best_retriever": best_retriever_name,
+            "retriever_evaluation": evaluation_results,
+            "best_documents_file": best_retriever_docs_file,
             "best_llm": best_llm_name,
             **routing_results
         }
