@@ -129,7 +129,6 @@ class BM25_Elastic_Jina(Retriever):
         self.index_name = config.get('index_name', 'documents')
         self.elastic_user = config.get('elastic_user', 'elastic')
         self.elastic_password = config.get('elastic_password', '<redacted>')
-        self.elastic_password = config.get('elastic_password', '[redacted]')
         self.elastic_scheme = config.get('elastic_scheme', 'https')
         self.elastic_ca_cert = config.get('elastic_ca_cert', '/future/u/manihani/elasticsearch-8.14.3/config/certs/http_ca.crt')  # Adjust this path
         self.es = None
